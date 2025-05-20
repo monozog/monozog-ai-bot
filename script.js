@@ -1,4 +1,4 @@
-const API_KEY = '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';
+const API_KEY = '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';
 const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // Add puppy helper constants and variables
