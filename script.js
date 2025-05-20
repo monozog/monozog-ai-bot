@@ -10,6 +10,10 @@ marked.setOptions({
     gfm: true
 });
 
+// API Configuration
+const API_KEY = import.meta.env.VITE_API_KEY;
+const API_URL = 'https://api.monozogi.com/v1/chat/completions';
+
 // Presets data
 const presets = [
     { id: 'photography', name: 'Photography Portfolio' },
@@ -116,7 +120,7 @@ function createPortfolioPuppy() {
     const puppyInput = chatWindow.querySelector('.puppy-input');
     const puppySendBtn = chatWindow.querySelector('.puppy-send-btn');
     
-    function handlePuppyMessage() {
+    async function handlePuppyMessage() {
         const message = puppyInput.value.trim();
         if (!message) return;
         
@@ -129,22 +133,44 @@ function createPortfolioPuppy() {
         // Clear input
         puppyInput.value = '';
         
-        // Simulate response
-        setTimeout(() => {
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${API_KEY}`
+                },
+                body: JSON.stringify({
+                    messages: [{ role: 'user', content: message }]
+                })
+            });
+
+            const data = await response.json();
+            const botResponse = data.choices[0].message.content;
+
             const botMessage = document.createElement('div');
             botMessage.className = 'puppy-message';
             botMessage.innerHTML = `
                 <div class="puppy-message-content">
-                    I'll help you create a great portfolio! Let's start by choosing a template 
-                    or you can tell me more about what you're looking for.
+                    ${DOMPurify.sanitize(marked.parse(botResponse))}
                 </div>
             `;
             chatWindow.querySelector('.puppy-messages').appendChild(botMessage);
-            
-            // Scroll to bottom
-            const messages = chatWindow.querySelector('.puppy-messages');
-            messages.scrollTop = messages.scrollHeight;
-        }, 1000);
+        } catch (error) {
+            console.error('Error:', error);
+            const errorMessage = document.createElement('div');
+            errorMessage.className = 'puppy-message';
+            errorMessage.innerHTML = `
+                <div class="puppy-message-content">
+                    Sorry, I encountered an error. Please try again later.
+                </div>
+            `;
+            chatWindow.querySelector('.puppy-messages').appendChild(errorMessage);
+        }
+        
+        // Scroll to bottom
+        const messages = chatWindow.querySelector('.puppy-messages');
+        messages.scrollTop = messages.scrollHeight;
     }
     
     puppySendBtn.addEventListener('click', handlePuppyMessage);
@@ -168,7 +194,7 @@ promptInput.addEventListener('keydown', (e) => {
     }
 });
 
-function handleSubmit() {
+async function handleSubmit() {
     const prompt = promptInput.value.trim();
     if (!prompt) return;
 
@@ -182,12 +208,26 @@ function handleSubmit() {
     // Show loading animation
     loadingAnimation.classList.add('active');
 
-    // Simulate AI response (replace with actual API call)
-    setTimeout(() => {
-        const response = "This is a simulated AI response. You can replace this with actual API integration.";
-        addMessage(response, 'bot');
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_KEY}`
+            },
+            body: JSON.stringify({
+                messages: [{ role: 'user', content: prompt }]
+            })
+        });
+
+        const data = await response.json();
+        addMessage(data.choices[0].message.content, 'bot');
+    } catch (error) {
+        console.error('Error:', error);
+        addMessage('Sorry, I encountered an error. Please try again later.', 'bot');
+    } finally {
         loadingAnimation.classList.remove('active');
-    }, 1500);
+    }
 }
 
 function addMessage(content, type) {
